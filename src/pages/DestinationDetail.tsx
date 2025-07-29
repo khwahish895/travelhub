@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Calendar, Users, Star, Heart, Share2, ArrowLeft, Plane, Hotel, Car, Train } from 'lucide-react';
+import { MapPin, Calendar, Users, Star, Heart, Share2, ArrowLeft, Plane, Hotel, Car, Train, X, CheckCircle } from 'lucide-react';
 import { useBooking } from '../context/BookingContext';
 
 function DestinationDetail() {
@@ -8,6 +8,8 @@ function DestinationDetail() {
   const navigate = useNavigate();
   const { addSavedTrip, addBooking } = useBooking();
   const [isSaved, setIsSaved] = useState(false);
+  const [showBookingDetails, setShowBookingDetails] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
 
   // Mock destination data - in a real app, this would come from an API
   const destinationData = {
@@ -78,20 +80,81 @@ function DestinationDetail() {
   };
 
   const handleBookNow = () => {
-    // Add booking directly
-    addBooking({
+    setSelectedBooking({
       type: 'Flight',
       title: `Flight to ${destinationData.name}`,
       destination: destinationData.name,
       date: new Date().toISOString().split('T')[0],
-      status: 'Confirmed',
       price: 899,
-      image: destinationData.image
+      image: destinationData.image,
+      details: {
+        departure: 'New York (JFK)',
+        arrival: destinationData.name,
+        duration: '14h 30m',
+        airline: 'Japan Airlines',
+        class: 'Economy',
+        passengers: 1
+      }
     });
-    
-    // Show success message and redirect
-    alert('Booking successful! Check your dashboard for details.');
-    navigate('/dashboard');
+    setShowBookingDetails(true);
+  };
+
+  const handleActivityBook = (activity: any) => {
+    setSelectedBooking({
+      type: 'Activity',
+      title: activity.name,
+      destination: destinationData.name,
+      date: new Date().toISOString().split('T')[0],
+      price: activity.price,
+      image: activity.image,
+      details: {
+        duration: activity.duration,
+        location: destinationData.name,
+        groupSize: 'Small Group',
+        guide: 'Professional Guide',
+        includes: ['Transportation', 'Guide', 'Entrance Fees']
+      }
+    });
+    setShowBookingDetails(true);
+  };
+
+  const handleHotelBook = (hotel: any) => {
+    setSelectedBooking({
+      type: 'Hotel',
+      title: hotel.name,
+      destination: destinationData.name,
+      date: new Date().toISOString().split('T')[0],
+      price: hotel.price,
+      image: hotel.image,
+      details: {
+        checkIn: '3:00 PM',
+        checkOut: '11:00 AM',
+        roomType: 'Standard Room',
+        guests: 2,
+        amenities: ['WiFi', 'Breakfast', 'Pool', 'Gym'],
+        rating: hotel.rating
+      }
+    });
+    setShowBookingDetails(true);
+  };
+
+  const confirmBooking = () => {
+    if (selectedBooking) {
+      addBooking({
+        type: selectedBooking.type as 'Flight' | 'Hotel' | 'Train' | 'Car',
+        title: selectedBooking.title,
+        destination: selectedBooking.destination,
+        date: selectedBooking.date,
+        status: 'Confirmed',
+        price: selectedBooking.price,
+        image: selectedBooking.image
+      });
+      
+      setShowBookingDetails(false);
+      setSelectedBooking(null);
+      alert('Booking confirmed! Check your dashboard for details.');
+      navigate('/dashboard');
+    }
   };
 
   const handleViewDetails = () => {
@@ -107,6 +170,89 @@ function DestinationDetail() {
     navigate('/cars', { state: { destination: destinationData.name } });
   };
 
+  // Booking Details Modal
+  if (showBookingDetails && selectedBooking) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white">Booking Details</h2>
+            <button
+              onClick={() => setShowBookingDetails(false)}
+              className="text-white/70 hover:text-white"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {/* Booking Summary */}
+            <div className="bg-white/5 rounded-xl p-4">
+              <div className="flex items-center mb-4">
+                <img 
+                  src={selectedBooking.image} 
+                  alt={selectedBooking.title}
+                  className="w-16 h-16 rounded-lg object-cover mr-4"
+                />
+                <div>
+                  <h3 className="text-white font-semibold text-lg">{selectedBooking.title}</h3>
+                  <p className="text-white/70">{selectedBooking.destination}</p>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-cyan-400 font-bold text-xl">${selectedBooking.price}</span>
+                <span className="text-white/70">{selectedBooking.date}</span>
+              </div>
+            </div>
+
+            {/* Booking Details */}
+            <div className="bg-white/5 rounded-xl p-4">
+              <h4 className="text-white font-semibold mb-3">Booking Information</h4>
+              <div className="space-y-2">
+                {Object.entries(selectedBooking.details).map(([key, value]) => (
+                  <div key={key} className="flex justify-between">
+                    <span className="text-white/70 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                    <span className="text-white">
+                      {Array.isArray(value) ? value.join(', ') : value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Terms and Conditions */}
+            <div className="bg-white/5 rounded-xl p-4">
+              <h4 className="text-white font-semibold mb-3">Terms & Conditions</h4>
+              <ul className="text-white/70 text-sm space-y-1">
+                <li>• Booking is non-refundable</li>
+                <li>• Changes may incur additional fees</li>
+                <li>• Valid ID required for check-in</li>
+                <li>• Cancellation policy applies</li>
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowBookingDetails(false)}
+                className="flex-1 bg-white/10 backdrop-blur-sm border border-white/30 text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmBooking}
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-cyan-600 hover:to-blue-700 transition-all flex items-center justify-center"
+              >
+                <CheckCircle className="h-5 w-5 mr-2" />
+                Confirm Booking
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div 
       className="min-h-screen bg-cover bg-center bg-no-repeat relative"
@@ -115,80 +261,76 @@ function DestinationDetail() {
       }}
     >
       {/* Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-blue-900/50 to-purple-900/70"></div>
       
       {/* Content */}
       <div className="relative z-10 pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Back Button */}
-          <button
-            onClick={() => navigate(-1)}
-            className="mb-6 flex items-center text-white hover:text-cyan-400 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Back to Search
-          </button>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => navigate(-1)}
+              className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-4 py-2 rounded-xl hover:bg-white/20 transition-all flex items-center"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={handleSaveTrip}
+                className={`backdrop-blur-sm border px-4 py-2 rounded-xl transition-all flex items-center ${
+                  isSaved 
+                    ? 'bg-green-500/20 border-green-400 text-green-400' 
+                    : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                }`}
+              >
+                <Heart className={`h-4 w-4 mr-2 ${isSaved ? 'fill-current' : ''}`} />
+                {isSaved ? 'Saved' : 'Save Trip'}
+              </button>
+              <button className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-4 py-2 rounded-xl hover:bg-white/20 transition-all flex items-center">
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </button>
+            </div>
+          </div>
 
           {/* Hero Section */}
-          <div className="mb-12">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
-                  {destinationData.name}
-                </h1>
-                <div className="flex items-center text-white/90 mb-4">
-                  <MapPin className="h-5 w-5 mr-2" />
-                  <span>{destinationData.country}</span>
-                  <div className="flex items-center ml-6">
-                    <Star className="h-5 w-5 text-yellow-400 mr-1" />
-                    <span>{destinationData.rating}</span>
-                    <span className="ml-1">({destinationData.reviewCount} reviews)</span>
-                  </div>
-                </div>
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">{destinationData.name}</h1>
+            <p className="text-xl text-white/90 mb-6 max-w-3xl mx-auto">{destinationData.description}</p>
+            <div className="flex items-center justify-center gap-6 text-white/80">
+              <div className="flex items-center">
+                <Star className="h-5 w-5 text-yellow-400 mr-2" />
+                <span>{destinationData.rating} ({destinationData.reviewCount} reviews)</span>
               </div>
-              <div className="flex space-x-4">
-                <button
-                  onClick={handleSaveTrip}
-                  className={`p-3 rounded-full border transition-all ${
-                    isSaved 
-                      ? 'bg-red-500 border-red-500 text-white' 
-                      : 'bg-white/10 border-white/30 text-white hover:bg-white/20'
-                  }`}
-                >
-                  <Heart className={`h-6 w-6 ${isSaved ? 'fill-current' : ''}`} />
-                </button>
-                <button className="p-3 rounded-full bg-white/10 border border-white/30 text-white hover:bg-white/20 transition-all">
-                  <Share2 className="h-6 w-6" />
-                </button>
+              <div className="flex items-center">
+                <MapPin className="h-5 w-5 mr-2" />
+                <span>{destinationData.country}</span>
               </div>
             </div>
-            
-            <p className="text-xl text-white/90 max-w-4xl leading-relaxed">
-              {destinationData.description}
-            </p>
           </div>
 
           {/* Quick Info */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-              <Calendar className="h-8 w-8 text-cyan-400 mb-2" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <Calendar className="h-8 w-8 text-cyan-400 mx-auto mb-2" />
               <h3 className="text-white font-semibold mb-1">Best Time</h3>
-              <p className="text-white/80 text-sm">{destinationData.bestTime}</p>
+              <p className="text-white/70 text-sm">{destinationData.bestTime}</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-              <Users className="h-8 w-8 text-purple-400 mb-2" />
-              <h3 className="text-white font-semibold mb-1">Language</h3>
-              <p className="text-white/80 text-sm">{destinationData.language}</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-              <MapPin className="h-8 w-8 text-pink-400 mb-2" />
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <span className="text-2xl font-bold text-cyan-400 mb-2 block">{destinationData.currency.split(' ')[0]}</span>
               <h3 className="text-white font-semibold mb-1">Currency</h3>
-              <p className="text-white/80 text-sm">{destinationData.currency}</p>
+              <p className="text-white/70 text-sm">{destinationData.currency}</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-              <Star className="h-8 w-8 text-yellow-400 mb-2" />
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <span className="text-2xl font-bold text-cyan-400 mb-2 block">{destinationData.language}</span>
+              <h3 className="text-white font-semibold mb-1">Language</h3>
+              <p className="text-white/70 text-sm">Official Language</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <span className="text-2xl font-bold text-cyan-400 mb-2 block">{destinationData.timezone}</span>
               <h3 className="text-white font-semibold mb-1">Timezone</h3>
-              <p className="text-white/80 text-sm">{destinationData.timezone}</p>
+              <p className="text-white/70 text-sm">Local Time</p>
             </div>
           </div>
 
@@ -221,26 +363,15 @@ function DestinationDetail() {
                   <div className="p-4">
                     <h3 className="text-white font-semibold mb-2">{activity.name}</h3>
                     <p className="text-white/70 text-sm mb-3">{activity.duration}</p>
-                                         <div className="flex items-center justify-between">
-                       <span className="text-cyan-400 font-bold">${activity.price}</span>
-                       <button 
-                         onClick={() => {
-                           addBooking({
-                             type: 'Flight',
-                             title: activity.name,
-                             destination: destinationData.name,
-                             date: new Date().toISOString().split('T')[0],
-                             status: 'Confirmed',
-                             price: activity.price,
-                             image: activity.image
-                           });
-                           alert(`${activity.name} booked successfully!`);
-                         }}
-                         className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:from-cyan-600 hover:to-blue-700 transition-all"
-                       >
-                         Book Now
-                       </button>
-                     </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-cyan-400 font-bold">${activity.price}</span>
+                      <button 
+                        onClick={() => handleActivityBook(activity)}
+                        className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:from-cyan-600 hover:to-blue-700 transition-all"
+                      >
+                        Book Now
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -267,26 +398,15 @@ function DestinationDetail() {
                       <Star className="h-4 w-4 text-yellow-400 mr-1" />
                       <span className="text-white/80 text-sm">{hotel.rating}</span>
                     </div>
-                                         <div className="flex items-center justify-between">
-                       <span className="text-cyan-400 font-bold">${hotel.price}/night</span>
-                       <button 
-                         onClick={() => {
-                           addBooking({
-                             type: 'Hotel',
-                             title: hotel.name,
-                             destination: destinationData.name,
-                             date: new Date().toISOString().split('T')[0],
-                             status: 'Confirmed',
-                             price: hotel.price,
-                             image: hotel.image
-                           });
-                           alert(`${hotel.name} booked successfully!`);
-                         }}
-                         className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:from-cyan-600 hover:to-blue-700 transition-all"
-                       >
-                         Book Now
-                       </button>
-                     </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-cyan-400 font-bold">${hotel.price}/night</span>
+                      <button 
+                        onClick={() => handleHotelBook(hotel)}
+                        className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:from-cyan-600 hover:to-blue-700 transition-all"
+                      >
+                        Book Now
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -302,27 +422,27 @@ function DestinationDetail() {
                 From flights to accommodations, we've got everything you need.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                 <button
-                   onClick={handleBookNow}
-                   className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-8 py-4 rounded-xl font-semibold hover:from-cyan-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
-                 >
-                   <Plane className="h-5 w-5 mr-2" />
-                   Book Flights
-                 </button>
-                 <button 
-                   onClick={handleFindHotels}
-                   className="bg-white/10 backdrop-blur-sm border border-white/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 flex items-center justify-center"
-                 >
-                   <Hotel className="h-5 w-5 mr-2" />
-                   Find Hotels
-                 </button>
-                 <button 
-                   onClick={handleRentCar}
-                   className="bg-white/10 backdrop-blur-sm border border-white/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 flex items-center justify-center"
-                 >
-                   <Car className="h-5 w-5 mr-2" />
-                   Rent a Car
-                 </button>
+                <button
+                  onClick={handleBookNow}
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-8 py-4 rounded-xl font-semibold hover:from-cyan-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
+                >
+                  <Plane className="h-5 w-5 mr-2" />
+                  Book Flights
+                </button>
+                <button 
+                  onClick={handleFindHotels}
+                  className="bg-white/10 backdrop-blur-sm border border-white/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 flex items-center justify-center"
+                >
+                  <Hotel className="h-5 w-5 mr-2" />
+                  Find Hotels
+                </button>
+                <button 
+                  onClick={handleRentCar}
+                  className="bg-white/10 backdrop-blur-sm border border-white/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300 flex items-center justify-center"
+                >
+                  <Car className="h-5 w-5 mr-2" />
+                  Rent a Car
+                </button>
               </div>
             </div>
           </div>
