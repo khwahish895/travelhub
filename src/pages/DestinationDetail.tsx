@@ -6,7 +6,7 @@ import { useBooking } from '../context/BookingContext';
 function DestinationDetail() {
   const { destination } = useParams();
   const navigate = useNavigate();
-  const { addSavedTrip } = useBooking();
+  const { addSavedTrip, addBooking } = useBooking();
   const [isSaved, setIsSaved] = useState(false);
 
   // Mock destination data - in a real app, this would come from an API
